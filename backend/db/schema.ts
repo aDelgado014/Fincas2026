@@ -137,6 +137,30 @@ export const callTasks = sqliteTable('call_tasks', {
 
 // --- Audit & Logs ---
 
+// --- Telegram Bots (per community/user) ---
+
+export const telegramBots = sqliteTable('telegram_bots', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  communityId: text('community_id').references(() => communities.id, { onDelete: 'set null' }),
+  botToken: text('bot_token').notNull().unique(),
+  botUsername: text('bot_username'),
+  botName: text('bot_name').default('FINCA Asistente'),
+  webhookSet: integer('webhook_set').default(0),
+  active: integer('active').default(1),
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const telegramSessions = sqliteTable('telegram_sessions', {
+  id: text('id').primaryKey(),
+  botId: text('bot_id').references(() => telegramBots.id, { onDelete: 'cascade' }),
+  chatId: text('chat_id').notNull(),
+  username: text('username'),
+  firstName: text('first_name'),
+  history: text('history').default('[]'), // JSON array of messages
+  updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const auditLogs = sqliteTable('audit_logs', {
   id: text('id').primaryKey(),
   userId: text('user_id'), // Link to users table once implemented

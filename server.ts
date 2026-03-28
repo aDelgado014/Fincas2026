@@ -34,6 +34,7 @@ import communityOnboardingRoutes from './backend/api/community-onboarding.routes
 import bankRoutes from './backend/api/bank.routes.ts';
 import tenantRoutes from './backend/api/tenant.routes.ts';
 import facilitiesRoutes from './backend/api/admin-facilities.routes.ts';
+import telegramRoutes from './backend/api/telegram.routes.ts';
 
 import { authConfig } from './backend/auth.config.ts';
 import { adminOnly, superadminOnly, operatorAllowed, ownerAllowed } from './backend/api/role.middleware.ts';
@@ -113,6 +114,7 @@ async function startServer() {
   app.use('/api/bank', operatorAllowed, bankRoutes);
   app.use('/api/tenant', tenantRoutes);
   app.use('/api/facilities', facilitiesRoutes);
+  app.use('/api/telegram', telegramRoutes);
 
   // Admin Core (Debts, Export, Seed)
   app.use('/api', adminRoutes);

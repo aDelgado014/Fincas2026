@@ -1,15 +1,66 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Settings as SettingsIcon, Save, Database, Trash2, Key, Bell, Loader2, Type, Shield, Users } from 'lucide-react';
+import { Settings as SettingsIcon, Save, Database, Trash2, Key, Bell, Loader2, Type, Shield, Users, Send, Bot, Plus, Trash, ToggleLeft, ToggleRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function Settings() {
   const [loading, setLoading] = useState(false);
   const [seeding, setSeeding] = useState(false);
+
+  // Telegram state
+  const [telegramBots, setTelegramBots] = useState<any[]>([]);
+  const [newBotToken, setNewBotToken] = useState('');
+  const [addingBot, setAddingBot] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/telegram/bots', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setTelegramBots(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
+
+  const handleAddBot = async () => {
+    if (!newBotToken.trim()) { toast.error('Introduce el token del bot'); return; }
+    setAddingBot(true);
+    try {
+      const res = await fetch('/api/telegram/bots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ botToken: newBotToken.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`Bot @${data.botUsername} conectado correctamente`);
+      setNewBotToken('');
+      setTelegramBots(prev => [...prev, { id: data.botId, botUsername: data.botUsername, botName: data.botName, active: 1 }]);
+    } catch (err: any) {
+      toast.error(err.message || 'Error al conectar el bot');
+    } finally {
+      setAddingBot(false);
+    }
+  };
+
+  const handleDeleteBot = async (botId: string) => {
+    if (!confirm('¿Eliminar este bot? Se desconectará de Telegram.')) return;
+    try {
+      await fetch(`/api/telegram/bots/${botId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      setTelegramBots(prev => prev.filter(b => b.id !== botId));
+      toast.success('Bot eliminado');
+    } catch { toast.error('Error al eliminar'); }
+  };
+
+  const handleToggleBot = async (botId: string) => {
+    try {
+      const res = await fetch(`/api/telegram/bots/${botId}/toggle`, { method: 'PATCH', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      const data = await res.json();
+      setTelegramBots(prev => prev.map(b => b.id === botId ? { ...b, active: data.active } : b));
+      toast.success(data.active ? 'Bot activado' : 'Bot desactivado');
+    } catch { toast.error('Error'); }
+  };
 
   const isSuperAdmin = (() => {
     try {
@@ -277,6 +328,82 @@ export function Settings() {
             </CardContent>
           </Card>
         )}
+
+      {/* Telegram Chatbot */}
+      <Card className="border-blue-200 bg-blue-50/20">
+        <CardHeader>
+          <div className="flex items-center gap-2 text-blue-700">
+            <Send className="h-5 w-5" />
+            <CardTitle>Chatbot Telegram — FINCA</CardTitle>
+          </div>
+          <CardDescription>
+            Conecta un bot privado de Telegram para gestionar tu comunidad desde el móvil. Cada administrador tiene su propio bot personal.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Instrucciones */}
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm space-y-2">
+            <p className="font-semibold text-blue-800">¿Cómo crear tu bot?</p>
+            <ol className="list-decimal list-inside text-blue-700 space-y-1">
+              <li>Abre Telegram y busca <strong>@BotFather</strong></li>
+              <li>Escribe <code className="bg-blue-100 px-1 rounded">/newbot</code></li>
+              <li>Ponle un nombre (ej: <em>FINCA Las Flores</em>) y un username (ej: <em>finca_lasflores_bot</em>)</li>
+              <li>Copia el token que te da BotFather y pégalo aquí abajo</li>
+            </ol>
+          </div>
+
+          {/* Añadir nuevo bot */}
+          <div className="flex gap-2">
+            <Input
+              placeholder="Token del bot (ej: 1234567890:AAF...)"
+              value={newBotToken}
+              onChange={e => setNewBotToken(e.target.value)}
+              className="font-mono text-sm"
+              onKeyDown={e => e.key === 'Enter' && handleAddBot()}
+            />
+            <Button onClick={handleAddBot} disabled={addingBot} className="shrink-0">
+              {addingBot ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {addingBot ? 'Conectando...' : 'Conectar Bot'}
+            </Button>
+          </div>
+
+          {/* Lista de bots */}
+          {telegramBots.length > 0 ? (
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Bots conectados</Label>
+              {telegramBots.map(bot => (
+                <div key={bot.id} className="flex items-center justify-between p-3 rounded-lg border bg-white">
+                  <div className="flex items-center gap-3">
+                    <Bot className={`h-5 w-5 ${bot.active ? 'text-blue-500' : 'text-slate-300'}`} />
+                    <div>
+                      <p className="font-medium text-sm">{bot.botName || 'FINCA Bot'}</p>
+                      <p className="text-xs text-muted-foreground">@{bot.botUsername}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${bot.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {bot.active ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => handleToggleBot(bot.id)} title={bot.active ? 'Desactivar' : 'Activar'}>
+                      {bot.active ? <ToggleRight className="h-4 w-4 text-emerald-600" /> : <ToggleLeft className="h-4 w-4 text-slate-400" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteBot(bot.id)}>
+                      <Trash className="h-4 w-4 text-red-400" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">No hay bots conectados todavía.</p>
+          )}
+
+          <p className="text-xs text-muted-foreground">
+            Una vez conectado, abre Telegram, busca tu bot y escribe <code>/start</code> para comenzar.
+            El bot tiene acceso completo a los datos de tus comunidades.
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="flex justify-end">
         <Button onClick={handleSave}>

@@ -324,6 +324,7 @@ AdminFincas-MVP/
 | **Groq** (Llama 3.3 70B) | Chatbot inteligente con tool-use + importación IA + generación de documentos |
 | **Google Gemini** (1.5 Flash) | Análisis financiero predictivo |
 | **Resend** | Envío de emails (avisos, recibos, convocatorias) |
+| **Telegram Bot API** | Chatbot privado por administrador vía Telegram |
 | **Notion** | Espejo de incidencias y documentos |
 | **Supabase** | Almacenamiento en producción (PostgreSQL + Storage) |
 
@@ -376,6 +377,92 @@ npm run build
 | `NOTION_API_KEY` | No | API key de Notion para sincronización |
 | `ALLOWED_ORIGINS` | No | Orígenes CORS permitidos (por defecto `localhost:3000`) |
 | `STORAGE_PROVIDER` | No | `local` (defecto) o `supabase` |
+
+---
+
+## Chatbot Telegram — FINCA
+
+Cada administrador puede conectar su propio bot privado de Telegram al sistema. El bot tiene acceso completo a los datos de sus comunidades a través de las 16 herramientas de FINCA.
+
+### Configuración
+
+1. Abre Telegram y busca **@BotFather**
+2. Escribe `/newbot` y sigue las instrucciones
+3. Copia el token que te proporciona BotFather
+4. En AdminFincas → **Configuración** → sección "Chatbot Telegram"
+5. Pega el token y pulsa **Conectar Bot**
+6. Abre tu bot en Telegram y escribe `/start`
+
+### Arquitectura
+
+```
+Usuario → Telegram → POST /api/telegram/webhook/:botId
+                          ↓
+                   ai.service.ts (16 tools reales)
+                          ↓
+                   SQLite / PostgreSQL
+                          ↓
+                   Respuesta → Telegram → Usuario
+```
+
+### Tablas de base de datos
+
+| Tabla | Descripción |
+|-------|-------------|
+| `telegram_bots` | Un registro por bot conectado (token, usuario, comunidad) |
+| `telegram_sessions` | Historial de conversación por chat_id (últimos 20 mensajes) |
+
+### Comandos del bot
+
+| Comando | Descripción |
+|---------|-------------|
+| `/start` | Bienvenida e inicio de sesión |
+| `/reset` | Limpiar historial de conversación |
+| `/ayuda` | Lista de capacidades y ejemplos |
+
+### Archivos clave
+
+| Archivo | Descripción |
+|---------|-------------|
+| `backend/services/telegram.service.ts` | Lógica principal: webhook, sesiones, comandos |
+| `backend/api/telegram.routes.ts` | Endpoints: webhook + CRUD de bots |
+| `src/pages/Settings.tsx` | Panel de configuración visual con instrucciones |
+
+### Base de conocimiento
+
+Ver `docs/FINCA_knowledge_base.md` para la documentación completa del asistente: modelo de datos, herramientas disponibles, flujos de trabajo y base legal.
+
+---
+
+## Actualización 28 Marzo 2026
+
+### Correcciones de bugs
+- `Minutes.tsx`: Fixed 2 URLs con sintaxis de regex inválida → template literals
+- `Expenses.tsx` / `Audit.tsx`: Guard `Array.isArray()` en respuestas de API
+- `Settings.tsx`: Eliminado `</div>` extra que causaba error JSX
+
+### Nuevas funcionalidades
+| Página | Cambio |
+|--------|--------|
+| `Debt.tsx` | Título "Deuda" + botón "Enviar Recordatorios" funcional |
+| `Morosidad.tsx` | Título "Morosidad" (sin "Dashboard") |
+| `Reconciliation.tsx` | Botón renombrado a "Procesar" |
+| `BankConciliation.tsx` | Título "Banco" + exportar CSV pendientes |
+| `Communities.tsx` | Botón "Nueva Comunidad" navega correctamente |
+| `Incidents.tsx` | Modal real con POST a `/api/incidents` |
+| `Presupuesto.tsx` | Upload de fichero en modal de nuevo presupuesto |
+| `Calendario.tsx` | Modal "Nuevo Evento" con selector de comunidad |
+| `Communications.tsx` | Canal "Llamada IA" preparado |
+| `PremiumReservas.tsx` | Modal "Nueva Instalación" + card integración móvil |
+| `PremiumLegal.tsx` | Upload de plantillas con revisión legal por IA |
+| `PremiumConvocatorias.tsx` | Upload de plantillas de estilo |
+| `AdminProfile.tsx` | Avatar, creación de usuarios, campo contraseña |
+| `Settings.tsx` | Panel superusuario + **Chatbot Telegram** |
+| `AdminFincasPanel.tsx` | Menús colapsables |
+
+### Repositorio GitHub
+- **URL**: https://github.com/aDelgado014/Fincas2026
+- **Rama**: `main`
 
 ---
 
