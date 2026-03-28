@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+*.db
+*.db-journal
+adminfincas.db
+uploads/
+.DS_Store

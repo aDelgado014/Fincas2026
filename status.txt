@@ -1,0 +1,23 @@
+On branch main
+Your branch is ahead of 'origin/main' by 1 commit.
+  (use "git push" to publish your local commits)
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	modified:   backend/api/stats.routes.ts
+	modified:   backend/auth.config.ts
+	modified:   backend/db/schema.ts
+	modified:   backend/services/ai.service.ts
+	modified:   backend/services/audit.service.ts
+	modified:   backend/services/debt.service.ts
+	new file:   backend/services/incident.service.ts
+	modified:   backend/services/reconciliation.service.ts
+	new file:   src/components/common/AIAssistant.tsx
+	modified:   src/components/layout/DashboardLayout.tsx
+	modified:   src/pages/Dashboard.tsx
+	modified:   src/pages/Reconciliation.tsx
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	status.txt
+

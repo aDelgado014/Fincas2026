@@ -1,0 +1,5 @@
+{
+  "name": "AdminFincas MVP",
+  "description": "Plataforma web interna para administradores de fincas con gestión de comunidades, importación de datos, facturación y morosidad.",
+  "requestFramePermissions": []
+}
