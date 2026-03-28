@@ -3,7 +3,7 @@ import { db } from '../db/index.ts';
 import { telegramBots } from '../db/schema.ts';
 import { eq } from 'drizzle-orm';
 import { TelegramService, handleTelegramUpdate } from '../services/telegram.service.ts';
-import { operatorAllowed } from './role.middleware.ts';
+import { premiumOnly } from './role.middleware.ts';
 
 const router = Router();
 
@@ -29,7 +29,7 @@ router.post('/webhook/:botId', async (req: any, res: any) => {
 // ─── Rutas protegidas (gestión de bots por el admin) ─────────────────────────
 
 // Listar bots del usuario
-router.get('/bots', operatorAllowed, async (req: any, res: any) => {
+router.get('/bots', premiumOnly, async (req: any, res: any) => {
   try {
     const bots = await TelegramService.listBots(req.user.id);
     res.json(bots);
@@ -39,7 +39,7 @@ router.get('/bots', operatorAllowed, async (req: any, res: any) => {
 });
 
 // Registrar nuevo bot
-router.post('/bots', operatorAllowed, async (req: any, res: any) => {
+router.post('/bots', premiumOnly, async (req: any, res: any) => {
   try {
     const { botToken, communityId } = req.body;
     if (!botToken) return res.status(400).json({ error: 'botToken requerido' });
@@ -58,7 +58,7 @@ router.post('/bots', operatorAllowed, async (req: any, res: any) => {
 });
 
 // Eliminar bot
-router.delete('/bots/:botId', operatorAllowed, async (req: any, res: any) => {
+router.delete('/bots/:botId', premiumOnly, async (req: any, res: any) => {
   try {
     await TelegramService.deleteBot(req.params.botId, req.user.id);
     res.json({ success: true });
@@ -68,7 +68,7 @@ router.delete('/bots/:botId', operatorAllowed, async (req: any, res: any) => {
 });
 
 // Toggle activo/inactivo
-router.patch('/bots/:botId/toggle', operatorAllowed, async (req: any, res: any) => {
+router.patch('/bots/:botId/toggle', premiumOnly, async (req: any, res: any) => {
   try {
     const [bot] = await db.select().from(telegramBots)
       .where(eq(telegramBots.id, req.params.botId)).limit(1);

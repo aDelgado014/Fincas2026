@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Settings as SettingsIcon, Save, Database, Trash2, Key, Bell, Loader2, Type, Shield, Users, Send, Bot, Plus, Trash, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Settings as SettingsIcon, Save, Database, Trash2, Key, Bell, Loader2, Type, Shield, Users, Send, Bot, Plus, Trash, ToggleLeft, ToggleRight, Star, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function Settings() {
@@ -62,13 +62,16 @@ export function Settings() {
     } catch { toast.error('Error'); }
   };
 
-  const isSuperAdmin = (() => {
+  const { isSuperAdmin, isPremium } = (() => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) return false;
+      if (!token) return { isSuperAdmin: false, isPremium: false };
       const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.role === 'superadmin';
-    } catch { return false; }
+      return {
+        isSuperAdmin: payload.role === 'superadmin',
+        isPremium: payload.plan === 'premium' || payload.role === 'superadmin',
+      };
+    } catch { return { isSuperAdmin: false, isPremium: false }; }
   })();
 
   const [fontSize, setFontSize] = useState(() => {
@@ -330,17 +333,46 @@ export function Settings() {
         )}
 
       {/* Telegram Chatbot */}
-      <Card className="border-blue-200 bg-blue-50/20">
+      <Card className={`border-2 ${isPremium ? 'border-blue-200 bg-blue-50/20' : 'border-amber-200 bg-amber-50/20'}`}>
         <CardHeader>
-          <div className="flex items-center gap-2 text-blue-700">
-            <Send className="h-5 w-5" />
-            <CardTitle>Chatbot Telegram — FINCA</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-blue-700">
+              <Send className="h-5 w-5" />
+              <CardTitle>Chatbot Telegram — FINCA</CardTitle>
+            </div>
+            <span className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${isPremium ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+              <Star className="h-3 w-3" /> PREMIUM
+            </span>
           </div>
           <CardDescription>
-            Conecta un bot privado de Telegram para gestionar tu comunidad desde el móvil. Cada administrador tiene su propio bot personal.
+            Bot privado de Telegram con acceso completo a tus comunidades. Uno por administrador, completamente personalizable.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
+        {!isPremium ? (
+          <div className="flex flex-col items-center gap-4 py-8 text-center">
+            <div className="p-4 bg-amber-100 rounded-full">
+              <Lock className="h-8 w-8 text-amber-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-slate-800">Función exclusiva del plan Premium</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                Con el plan Premium puedes conectar tu propio bot privado de Telegram y gestionar todas tus comunidades desde el móvil usando FINCA como asistente personal.
+              </p>
+            </div>
+            <div className="bg-white border rounded-lg p-4 text-left text-sm space-y-2 max-w-sm w-full">
+              <p className="font-semibold text-slate-700">¿Qué incluye?</p>
+              {['Bot privado exclusivo para ti','Acceso a deudas, incidencias e informes','Envío de comunicaciones desde Telegram','Historial de conversación persistente','Comandos /start, /reset, /ayuda'].map(f => (
+                <p key={f} className="flex items-center gap-2 text-slate-600">
+                  <Star className="h-3 w-3 text-amber-500 shrink-0" /> {f}
+                </p>
+              ))}
+            </div>
+            <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={() => window.location.href = 'mailto:hola@bluecrabai.es?subject=Solicitud Plan Premium AdminFincas'}>
+              <Star className="h-4 w-4 mr-2" /> Solicitar Plan Premium
+            </Button>
+          </div>
+        ) : (
           {/* Instrucciones */}
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm space-y-2">
             <p className="font-semibold text-blue-800">¿Cómo crear tu bot?</p>
@@ -402,6 +434,7 @@ export function Settings() {
             Una vez conectado, abre Telegram, busca tu bot y escribe <code>/start</code> para comenzar.
             El bot tiene acceso completo a los datos de tus comunidades.
           </p>
+        )}
         </CardContent>
       </Card>
 

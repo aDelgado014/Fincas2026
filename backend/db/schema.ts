@@ -316,6 +316,7 @@ export const users = sqliteTable('users', {
   email: text('email').unique(),
   password: text('password'), // Will store hashed password
   role: text('role').default('operator'), // 'superadmin', 'admin', 'operator'
+  plan: text('plan').default('free'), // 'free', 'premium'
   emailVerified: text('email_verified'),
   image: text('image'),
 });

@@ -32,3 +32,18 @@ export const superadminOnly = checkRole(['superadmin']);
 export const adminOnly = checkRole(['superadmin', 'admin']);
 export const operatorAllowed = checkRole(['superadmin', 'admin', 'operator']);
 export const ownerAllowed = checkRole(['superadmin', 'admin', 'operator', 'owner']);
+
+// Premium plan check (superadmin always has access)
+export const premiumOnly = (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'No autenticado.' });
+  try {
+    const user = jwt.verify(token, JWT_SECRET) as any;
+    (req as any).user = user;
+    if (user.role === 'superadmin' || user.plan === 'premium') return next();
+    return res.status(403).json({ error: 'Esta función requiere el plan Premium.', code: 'PREMIUM_REQUIRED' });
+  } catch {
+    return res.status(401).json({ error: 'Token inválido o expirado.' });
+  }
+};

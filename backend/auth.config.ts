@@ -94,14 +94,14 @@ router.post('/login', authRateLimiter, async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, name: user.name, email: user.email, role: user.role, ownerId },
+      { id: user.id, name: user.name, email: user.email, role: user.role, plan: user.plan ?? 'free', ownerId },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     );
 
     res.json({
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, ownerId },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, plan: user.plan ?? 'free', ownerId },
       message: 'Login exitoso.'
     });
   } catch (error: any) {
@@ -153,14 +153,14 @@ router.post('/register', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role, ownerId: matchingOwner?.id },
+      { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role, plan: newUser.plan ?? 'free', ownerId: matchingOwner?.id },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     );
 
     res.status(201).json({
       token,
-      user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role, ownerId: matchingOwner?.id },
+      user: { id: newUser.id, name: newUser.name, email: newUser.email, role: newUser.role, plan: newUser.plan ?? 'free', ownerId: matchingOwner?.id },
       message: 'Usuario creado exitosamente.'
     });
   } catch (error: any) {
