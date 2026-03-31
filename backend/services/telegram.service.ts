@@ -166,11 +166,21 @@ export class TelegramService {
     if (!info.ok) throw new Error(`Token inválido: ${info.description}`);
 
     const botId = uuidv4();
-    const webhookUrl = `${baseUrl}/api/telegram/webhook/${botId}`;
+    let webhookSet = 0;
 
-    // Set webhook
-    const webhookResult = await registerWebhook(botToken, webhookUrl);
-    if (!webhookResult.ok) throw new Error(`Error configurando webhook: ${webhookResult.description}`);
+    if (baseUrl.startsWith('https://')) {
+      // Production: use Telegram webhook (requires HTTPS)
+      const webhookUrl = `${baseUrl}/api/telegram/webhook/${botId}`;
+      const webhookResult = await registerWebhook(botToken, webhookUrl);
+      if (!webhookResult.ok) throw new Error(`Error configurando webhook: ${webhookResult.description}`);
+      webhookSet = 1;
+      console.log(`[Telegram] Webhook registrado: ${webhookUrl}`);
+    } else {
+      // Development (HTTP/localhost): use polling instead
+      await deleteWebhook(botToken); // clear any stale webhook
+      webhookSet = 0;
+      console.log(`[Telegram] Modo polling activo (HTTP local). El bot recibirá mensajes via long polling.`);
+    }
 
     // Save to DB
     await db.insert(telegramBots).values({
@@ -180,7 +190,7 @@ export class TelegramService {
       botToken,
       botUsername: info.result.username,
       botName: info.result.first_name,
-      webhookSet: 1,
+      webhookSet,
       active: 1,
     });
 
@@ -188,7 +198,7 @@ export class TelegramService {
       botId,
       botUsername: info.result.username,
       botName: info.result.first_name,
-      webhookUrl,
+      mode: webhookSet ? 'webhook' : 'polling',
     };
   }
 
@@ -210,4 +220,53 @@ export class TelegramService {
     await deleteWebhook(bot.botToken);
     await db.delete(telegramBots).where(eq(telegramBots.id, botId));
   }
+}
+
+// ─── Long Polling Worker (for HTTP/local development) ─────────────────────────
+
+const botOffsets: Map<string, number> = new Map();
+
+async function pollBotOnce(botId: string, token: string) {
+  const offset = botOffsets.get(botId) || 0;
+  try {
+    const res = await fetch(
+      `${TELEGRAM_API}${token}/getUpdates?offset=${offset}&limit=10&timeout=1`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    const data = await res.json();
+    if (!data.ok || !data.result?.length) return;
+
+    for (const update of data.result) {
+      try {
+        await handleTelegramUpdate(botId, token, update);
+      } catch (err: any) {
+        console.error(`[Telegram polling] Error processing update:`, err.message);
+      }
+      botOffsets.set(botId, update.update_id + 1);
+    }
+  } catch {
+    // Network errors during polling are expected and can be ignored
+  }
+}
+
+export function startTelegramPolling() {
+  setInterval(async () => {
+    try {
+      const bots = await db.select({
+        id: telegramBots.id,
+        botToken: telegramBots.botToken,
+        webhookSet: telegramBots.webhookSet,
+      }).from(telegramBots).where(eq(telegramBots.active, 1));
+
+      // Only poll bots WITHOUT a webhook (dev/polling mode)
+      for (const bot of bots) {
+        if (!bot.webhookSet) {
+          pollBotOnce(bot.id, bot.botToken);
+        }
+      }
+    } catch {
+      // DB not ready yet, skip
+    }
+  }, 2000);
+  console.log('[Telegram] Polling worker iniciado (cada 2s para bots sin webhook)');
 }

@@ -56,8 +56,9 @@ router.get('/keys', (req, res) => {
 // POST /api/settings/keys — set a key value
 router.post('/keys', (req, res) => {
   try {
-    const { key, value } = req.body;
-    if (!ALLOWED_KEYS.includes(key)) {
+    console.log('[Settings] POST /keys — body:', req.body ? `key=${req.body.key}` : 'NO BODY');
+    const { key, value } = req.body || {};
+    if (!key || !ALLOWED_KEYS.includes(key)) {
       return res.status(400).json({ error: 'Clave no permitida' });
     }
     if (value === undefined || value === null || String(value).trim() === '') {
@@ -69,8 +70,10 @@ router.post('/keys', (req, res) => {
     saveConfig(config);
     // Apply immediately to process.env so it takes effect without restart
     process.env[key] = trimmed;
+    console.log(`[Settings] Clave '${key}' guardada en ${CONFIG_FILE} y process.env`);
     res.json({ success: true, key });
   } catch (err: any) {
+    console.error('[Settings] Error guardando clave:', err.message);
     res.status(500).json({ error: err.message || 'Error al guardar la configuración' });
   }
 });

@@ -43,8 +43,23 @@ import { adminOnly, superadminOnly, operatorAllowed, ownerAllowed } from './back
 import { startAutomationWorker } from './backend/workers/automation.worker.ts';
 import { startCallWorker } from './backend/workers/call.worker.ts';
 import { startScheduler } from './backend/services/scheduler.service.ts';
+import { startTelegramPolling } from './backend/services/telegram.service.ts';
+import fs from 'fs';
+import path from 'path';
 
 dotenv.config();
+
+// Pre-create config directory so settings can always write api-keys.json
+try {
+  const configDir = path.resolve('./config');
+  if (!fs.existsSync(configDir)) {
+    fs.mkdirSync(configDir, { recursive: true });
+    console.log('[Config] Directorio config/ creado en', configDir);
+  }
+} catch (e: any) {
+  console.warn('[Config] No se pudo crear config/:', e.message);
+}
+
 applyConfigToEnv(); // Override .env with saved config (config/api-keys.json)
 
 async function startServer() {
@@ -128,6 +143,7 @@ async function startServer() {
   startAutomationWorker();
   startCallWorker();
   startScheduler();
+  startTelegramPolling();
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
