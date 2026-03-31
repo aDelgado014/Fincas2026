@@ -568,10 +568,10 @@ async function executeTool(name: string, args: any): Promise<{ result: string; a
 // ─── Servicio Principal ───────────────────────────────────────────────────────
 
 export class AIService {
-  private static apiKey = process.env.GROQ_API_KEY;
-
   static async getChatResponse(messages: { role: string; content: string }[]): Promise<AIResponse> {
-    if (!this.apiKey) throw new Error('GROQ_API_KEY no configurada.');
+    // Read from process.env on every call so keys saved via Settings take effect immediately
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error('GROQ_API_KEY no configurada.');
 
     const system = {
       role: 'system',
@@ -592,7 +592,7 @@ Normas:
     for (let i = 0; i < 5; i++) {
       const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.apiKey}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: groqMessages, tools: TOOLS, tool_choice: 'auto', temperature: 0.3 }),
       });
       if (!resp.ok) { const e = await resp.json(); throw new Error(e.error?.message || 'Error Groq API'); }
