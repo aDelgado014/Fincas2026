@@ -4,12 +4,72 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Settings as SettingsIcon, Save, Database, Trash2, Key, Bell, Loader2, Type, Shield, Users, Send, Bot, Plus, Trash, ToggleLeft, ToggleRight, Star, Lock } from 'lucide-react';
+import { Save, Database, Trash2, Key, Bell, Loader2, Type, Shield, Send, Bot, Plus, Trash, ToggleLeft, ToggleRight, Star, Lock, CheckCircle2, Circle, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+
+const AI_PROVIDERS = [
+  { key: 'GROQ_API_KEY', id: 'groq', label: 'Groq', model: 'Llama 3.3 70B', desc: 'Chatbot, generación de documentos y actas. Proveedor por defecto.' },
+  { key: 'OPENAI_API_KEY', id: 'openai', label: 'OpenAI', model: 'GPT-4o / GPT-4', desc: 'Alternativa al chatbot compatible con API OpenAI.' },
+  { key: 'ANTHROPIC_API_KEY', id: 'anthropic', label: 'Anthropic (Claude)', model: 'Claude 3.5 Sonnet', desc: 'Alternativa de alta precisión para documentos complejos.' },
+  { key: 'GEMINI_API_KEY', id: 'gemini', label: 'Google Gemini', model: 'Gemini 1.5 Flash', desc: 'Analytics financiero e informes predictivos.' },
+];
+const OTHER_SERVICES = [
+  { key: 'RESEND_API_KEY', label: 'Resend', desc: 'Envío de emails transaccionales (avisos, cuotas, convocatorias).' },
+];
 
 export function Settings() {
   const [loading, setLoading] = useState(false);
   const [seeding, setSeeding] = useState(false);
+
+  // API Keys state
+  const [keyStatus, setKeyStatus] = useState<Record<string, boolean | string>>({});
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [keyInput, setKeyInput] = useState('');
+  const [showKey, setShowKey] = useState(false);
+  const [savingKey, setSavingKey] = useState(false);
+  const [activeProvider, setActiveProvider] = useState('groq');
+
+  useEffect(() => {
+    fetch('/api/settings/keys', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      .then(r => r.ok ? r.json() : {})
+      .then(data => {
+        setKeyStatus(data);
+        if (data.AI_PROVIDER) setActiveProvider(data.AI_PROVIDER as string);
+      })
+      .catch(() => {});
+  }, []);
+
+  const startEdit = (key: string) => {
+    setEditingKey(key); setKeyInput(''); setShowKey(false);
+  };
+  const cancelEdit = () => { setEditingKey(null); setKeyInput(''); };
+
+  const saveKey = async (key: string) => {
+    if (!keyInput.trim()) { toast.error('Introduce la clave API'); return; }
+    setSavingKey(true);
+    try {
+      const res = await fetch('/api/settings/keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ key, value: keyInput.trim() }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setKeyStatus(prev => ({ ...prev, [key]: true }));
+      setEditingKey(null); setKeyInput('');
+      toast.success(`Clave guardada y activa de inmediato`);
+    } catch (e: any) { toast.error(e.message); }
+    finally { setSavingKey(false); }
+  };
+
+  const saveProvider = async (provider: string) => {
+    setActiveProvider(provider);
+    await fetch('/api/settings/keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+      body: JSON.stringify({ key: 'AI_PROVIDER', value: provider }),
+    });
+    toast.success(`Proveedor de IA cambiado a ${AI_PROVIDERS.find(p => p.id === provider)?.label || provider}`);
+  };
 
   // Telegram state
   const [telegramBots, setTelegramBots] = useState<any[]>([]);
@@ -142,20 +202,128 @@ export function Settings() {
             </div>
             <CardDescription>Configura las llaves para los servicios de IA y Email.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="groq-key">Groq API Key</Label>
-              <div className="flex gap-2">
-                <Input id="groq-key" type="password" value="***************************" disabled />
-                <Button variant="outline" size="sm">Cambiar</Button>
+          <CardContent className="space-y-5">
+            {/* Active AI Provider selector */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Proveedor de IA activo</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {AI_PROVIDERS.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => saveProvider(p.id)}
+                    className={`flex flex-col items-start gap-0.5 px-3 py-2 rounded-lg border text-left transition-colors ${activeProvider === p.id ? 'border-primary bg-primary/5 text-primary' : 'border-border hover:border-primary/50'}`}
+                  >
+                    <span className="text-xs font-semibold">{p.label}</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">{p.model}</span>
+                  </button>
+                ))}
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="resend-key">Resend API Key</Label>
-              <div className="flex gap-2">
-                <Input id="resend-key" type="password" value="***************************" disabled />
-                <Button variant="outline" size="sm">Cambiar</Button>
-              </div>
+            <Separator />
+            {/* AI Provider API Keys */}
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Claves de proveedores de IA</Label>
+              {AI_PROVIDERS.map(p => (
+                <div key={p.key} className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {keyStatus[p.key] ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-slate-300 shrink-0" />
+                      )}
+                      <div>
+                        <span className="text-sm font-medium">{p.label}</span>
+                        <p className="text-xs text-muted-foreground">{p.desc}</p>
+                      </div>
+                    </div>
+                    {editingKey !== p.key && (
+                      <Button variant="outline" size="sm" onClick={() => startEdit(p.key)}>
+                        {keyStatus[p.key] ? 'Cambiar' : 'Configurar'}
+                      </Button>
+                    )}
+                  </div>
+                  {editingKey === p.key && (
+                    <div className="flex gap-2 pl-6">
+                      <div className="relative flex-1">
+                        <Input
+                          type={showKey ? 'text' : 'password'}
+                          placeholder={`${p.label} API Key…`}
+                          value={keyInput}
+                          onChange={e => setKeyInput(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && saveKey(p.key)}
+                          className="pr-9 font-mono text-sm"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowKey(v => !v)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      <Button size="sm" onClick={() => saveKey(p.key)} disabled={savingKey}>
+                        {savingKey ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Guardar'}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={cancelEdit}>Cancelar</Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <Separator />
+            {/* Other services */}
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold">Otros servicios</Label>
+              {OTHER_SERVICES.map(s => (
+                <div key={s.key} className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {keyStatus[s.key] ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-slate-300 shrink-0" />
+                      )}
+                      <div>
+                        <span className="text-sm font-medium">{s.label}</span>
+                        <p className="text-xs text-muted-foreground">{s.desc}</p>
+                      </div>
+                    </div>
+                    {editingKey !== s.key && (
+                      <Button variant="outline" size="sm" onClick={() => startEdit(s.key)}>
+                        {keyStatus[s.key] ? 'Cambiar' : 'Configurar'}
+                      </Button>
+                    )}
+                  </div>
+                  {editingKey === s.key && (
+                    <div className="flex gap-2 pl-6">
+                      <div className="relative flex-1">
+                        <Input
+                          type={showKey ? 'text' : 'password'}
+                          placeholder={`${s.label} API Key…`}
+                          value={keyInput}
+                          onChange={e => setKeyInput(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && saveKey(s.key)}
+                          className="pr-9 font-mono text-sm"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowKey(v => !v)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      <Button size="sm" onClick={() => saveKey(s.key)} disabled={savingKey}>
+                        {savingKey ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Guardar'}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={cancelEdit}>Cancelar</Button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -373,6 +541,7 @@ export function Settings() {
             </Button>
           </div>
         ) : (
+          <>
           {/* Instrucciones */}
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm space-y-2">
             <p className="font-semibold text-blue-800">¿Cómo crear tu bot?</p>
@@ -434,6 +603,7 @@ export function Settings() {
             Una vez conectado, abre Telegram, busca tu bot y escribe <code>/start</code> para comenzar.
             El bot tiene acceso completo a los datos de tus comunidades.
           </p>
+          </>
         )}
         </CardContent>
       </Card>

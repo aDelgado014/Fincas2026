@@ -15,6 +15,13 @@
       "when": 1774529287969,
       "tag": "0001_aromatic_thunderball",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1743379200000,
+      "tag": "0002_convocatorias",
+      "breakpoints": true
     }
   ]
 }

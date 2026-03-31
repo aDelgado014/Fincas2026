@@ -455,7 +455,7 @@ Ver `docs/FINCA_knowledge_base.md` para la documentación completa del asistente
 | `Communications.tsx` | Canal "Llamada IA" preparado |
 | `PremiumReservas.tsx` | Modal "Nueva Instalación" + card integración móvil |
 | `PremiumLegal.tsx` | Upload de plantillas con revisión legal por IA |
-| `PremiumConvocatorias.tsx` | Upload de plantillas de estilo |
+| `PremiumConvocatorias.tsx` | **Reescrito completamente** — Generador de convocatorias LPH con plantilla oficial |
 | `AdminProfile.tsx` | Avatar, creación de usuarios, campo contraseña |
 | `Settings.tsx` | Panel superusuario + **Chatbot Telegram** |
 | `AdminFincasPanel.tsx` | Menús colapsables |
@@ -463,6 +463,121 @@ Ver `docs/FINCA_knowledge_base.md` para la documentación completa del asistente
 ### Repositorio GitHub
 - **URL**: https://github.com/aDelgado014/Fincas2026
 - **Rama**: `main`
+
+---
+
+---
+
+## Módulo de Juntas — Convocatorias (Art. 16.2 LPH)
+
+Actualizado: **31 Marzo 2026** — Reescritura completa basada en modelo real de convocatoria oficial.
+
+### Ruta: `/premium/convocatorias`
+
+El módulo genera convocatorias de junta conformes al **artículo 16.2 de la Ley de Propiedad Horizontal**, incluyendo todos los documentos adjuntos habituales.
+
+### Estructura del documento oficial
+
+El generador produce un documento con hasta 4 secciones separadas, siguiendo el modelo estándar utilizado por administradores de fincas:
+
+#### Sección 1 — Carta de Convocatoria
+- Membrete con nombre y dirección de la comunidad
+- Fecha y ciudad de emisión (alineada a la derecha)
+- Referencia a Art. 16.2 LPH
+- Tipo de junta: Ordinaria / Extraordinaria
+- Día de la semana calculado automáticamente
+- **Dos horas de convocatoria**: 1ª convocatoria + 2ª (si no hay quórum)
+- Lugar de celebración
+- Orden del día numerado
+- Firma del Presidente
+- Talón de **delegación de voto** (línea de corte al pie)
+
+#### Sección 2 — Listado de Morosos (opcional)
+```
+LISTADO DE PROPIETARIOS SIN DERECHO A VOTO A FECHA DE [FECHA]:
+
+PROPIEDAD                                              DEUDA
+────────────────────────────────────────────────────────────
+2ºderecha...............................................5.890,00€
+4ºizquierda.............................................150,00€
+```
+
+#### Sección 3 — Presupuesto del Ejercicio (opcional)
+```
+        PRESUPUESTO DEL EJERCICIO 01/01/2026 al 31/12/2026
+────────────────────────────────────────────────────────────
+Código        Título                              Presupuesto
+
+GRUPO 01 Gastos Generales
+6230001       HONORARIOS                            1.200,00
+6230007       LIMPIEZA                              2.600,00
+...
+────────────────────────────────────────────────────────────
+TOTAL PRESUPUESTO                                  12.785,00
+```
+
+#### Sección 4 — Estado de Cuentas (opcional)
+```
+        INGRESOS Y GASTOS DE EDIFICIO [NOMBRE]
+        Periodo: Desde el 01/01/2025 Hasta el 31/12/2025
+────────────────────────────────────────────────────────────
+                                                     Importe
+INGRESO ANUAL                                       8.364,00
+
+GASTOS
+LUZ PORTAL Y ESCALERAS                                694,71
+LIMPIEZA                                            2.452,20
+...
+────────────────────────────────────────────────────────────
+Total gastos                                       11.315,75
+```
+
+### Puntos del Orden del Día por defecto
+
+Los siguientes 6 puntos se cargan automáticamente, editables antes de generar:
+
+1. Exposición y aprobación del estado de cuentas del año anterior.
+2. Exposición y aprobación del presupuesto de ingresos y gastos para el año siguiente.
+3. Acuerdos sobre liquidación de deuda a comuneros morosos y autorización al administrador.
+4. Cambio o renovación de junta directiva.
+5. Información sobre saneamientos comunitarios.
+6. Ruegos y preguntas.
+
+### API de Convocatorias
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/convocatorias/generate` | Genera y guarda una convocatoria |
+| `GET` | `/api/convocatorias` | Lista todas (filtro: `?communityId=`) |
+| `GET` | `/api/convocatorias/:id` | Obtiene una convocatoria por ID |
+| `DELETE` | `/api/convocatorias/:id` | Elimina una convocatoria |
+
+### Tabla de base de datos: `convocatorias`
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | text PK | UUID |
+| `community_id` | text FK | Referencia a `communities` |
+| `tipo` | text | `'Ordinaria'` o `'Extraordinaria'` |
+| `ciudad` | text | Ciudad de emisión |
+| `fecha_carta` | text | Fecha de la carta (ISO) |
+| `fecha_junta` | text | Fecha de la junta (ISO) |
+| `horas_primera` | text | Hora 1ª convocatoria (`HH:MM`) |
+| `horas_segunda` | text | Hora 2ª convocatoria (`HH:MM`) |
+| `lugar` | text | Lugar de celebración |
+| `presidente_nombre` | text | Nombre del presidente firmante |
+| `agenda_items` | text | JSON `[{texto}]` |
+| `morosos_list` | text | JSON `[{propiedad, deuda}]` |
+| `morosos_fecha` | text | Fecha de corte para lista de morosos |
+| `presupuesto` | text | JSON `{desde, hasta, items:[{codigo,titulo,importe}]}` |
+| `estado_cuentas` | text | JSON `{periodoDesde, periodoHasta, ingreso, gastos:[{concepto,importe}]}` |
+| `incluir_delegacion` | integer | 1 = incluir talón de delegación |
+| `incluir_morosos` | integer | 1 = incluir listado morosos |
+| `incluir_presupuesto` | integer | 1 = incluir presupuesto |
+| `incluir_estado_cuentas` | integer | 1 = incluir estado de cuentas |
+| `content` | text | Texto completo del documento generado |
+| `status` | text | `draft` / `sent` / `archived` |
+| `created_at` | text | Timestamp de creación |
 
 ---
 

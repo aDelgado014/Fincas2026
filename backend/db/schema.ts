@@ -320,3 +320,30 @@ export const users = sqliteTable('users', {
   emailVerified: text('email_verified'),
   image: text('image'),
 });
+
+// --- Convocatorias de Junta (Art. 16.2 LPH) ---
+
+export const convocatorias = sqliteTable('convocatorias', {
+  id: text('id').primaryKey(),
+  communityId: text('community_id').references(() => communities.id, { onDelete: 'cascade' }),
+  tipo: text('tipo').notNull().default('Ordinaria'), // 'Ordinaria' | 'Extraordinaria'
+  ciudad: text('ciudad').default(''),
+  fechaCarta: text('fecha_carta').notNull(), // ISO date: letter creation date
+  fechaJunta: text('fecha_junta').notNull(), // ISO date: meeting date
+  horasPrimera: text('horas_primera').notNull().default('18:30'),
+  horasSegunda: text('horas_segunda').notNull().default('19:00'),
+  lugar: text('lugar').default('Portal del edificio'),
+  presidenteNombre: text('presidente_nombre'),
+  agendaItems: text('agenda_items'), // JSON [{texto}]
+  morososList: text('morosos_list'), // JSON [{propiedad, deuda}]
+  morososFecha: text('morosos_fecha'),
+  presupuesto: text('presupuesto'), // JSON {desde, hasta, items:[{codigo,titulo,importe}]}
+  estadoCuentas: text('estado_cuentas'), // JSON {periodoDesde,periodoHasta,ingreso,gastos:[{concepto,importe}]}
+  incluirDelegacion: integer('incluir_delegacion').default(1),
+  incluirMorosos: integer('incluir_morosos').default(1),
+  incluirPresupuesto: integer('incluir_presupuesto').default(0),
+  incluirEstadoCuentas: integer('incluir_estado_cuentas').default(0),
+  content: text('content'), // Generated full document text
+  status: text('status').default('draft'), // 'draft' | 'sent' | 'archived'
+  createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});

@@ -35,6 +35,8 @@ import bankRoutes from './backend/api/bank.routes.ts';
 import tenantRoutes from './backend/api/tenant.routes.ts';
 import facilitiesRoutes from './backend/api/admin-facilities.routes.ts';
 import telegramRoutes from './backend/api/telegram.routes.ts';
+import convocatoriasRoutes from './backend/api/convocatorias.routes.ts';
+import settingsRoutes, { applyConfigToEnv } from './backend/api/settings.routes.ts';
 
 import { authConfig } from './backend/auth.config.ts';
 import { adminOnly, superadminOnly, operatorAllowed, ownerAllowed } from './backend/api/role.middleware.ts';
@@ -43,6 +45,7 @@ import { startCallWorker } from './backend/workers/call.worker.ts';
 import { startScheduler } from './backend/services/scheduler.service.ts';
 
 dotenv.config();
+applyConfigToEnv(); // Override .env with saved config (config/api-keys.json)
 
 async function startServer() {
   const app = express();
@@ -115,6 +118,8 @@ async function startServer() {
   app.use('/api/tenant', tenantRoutes);
   app.use('/api/facilities', facilitiesRoutes);
   app.use('/api/telegram', telegramRoutes);
+  app.use('/api/convocatorias', convocatoriasRoutes);
+  app.use('/api/settings', settingsRoutes);
 
   // Admin Core (Debts, Export, Seed)
   app.use('/api', adminRoutes);
