@@ -24,6 +24,7 @@ import {
   ChevronRight,
   Plus,
   Receipt,
+  Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +43,7 @@ const mainNavigation = [
   { name: 'Calendario', href: '/calendario', icon: CalendarDays },
   { name: 'Comunicaciones', href: '/comunicaciones', icon: Mail },
   { name: 'Auditoría', href: '/auditoria', icon: History },
+  { name: 'Chatbot', href: '/chatbot', icon: Bot },
 ];
 
 const premiumNavigation = [
