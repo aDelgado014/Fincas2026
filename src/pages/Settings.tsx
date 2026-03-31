@@ -53,7 +53,11 @@ export function Settings() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({ key, value: keyInput.trim() }),
       });
-      if (!res.ok) throw new Error((await res.json()).error);
+      if (!res.ok) {
+        let errMsg = 'Error al guardar la clave';
+        try { errMsg = (await res.json()).error || errMsg; } catch {}
+        throw new Error(errMsg);
+      }
       setKeyStatus(prev => ({ ...prev, [key]: true }));
       setEditingKey(null); setKeyInput('');
       toast.success(`Clave guardada y activa de inmediato`);

@@ -55,20 +55,24 @@ router.get('/keys', (req, res) => {
 
 // POST /api/settings/keys — set a key value
 router.post('/keys', (req, res) => {
-  const { key, value } = req.body;
-  if (!ALLOWED_KEYS.includes(key)) {
-    return res.status(400).json({ error: 'Clave no permitida' });
+  try {
+    const { key, value } = req.body;
+    if (!ALLOWED_KEYS.includes(key)) {
+      return res.status(400).json({ error: 'Clave no permitida' });
+    }
+    if (value === undefined || value === null || String(value).trim() === '') {
+      return res.status(400).json({ error: 'El valor no puede estar vacío' });
+    }
+    const trimmed = String(value).trim();
+    const config = loadConfig();
+    config[key] = trimmed;
+    saveConfig(config);
+    // Apply immediately to process.env so it takes effect without restart
+    process.env[key] = trimmed;
+    res.json({ success: true, key });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Error al guardar la configuración' });
   }
-  if (value === undefined || value === null || String(value).trim() === '') {
-    return res.status(400).json({ error: 'El valor no puede estar vacío' });
-  }
-  const trimmed = String(value).trim();
-  const config = loadConfig();
-  config[key] = trimmed;
-  saveConfig(config);
-  // Apply immediately to process.env so it takes effect without restart
-  process.env[key] = trimmed;
-  res.json({ success: true, key });
 });
 
 // DELETE /api/settings/keys/:key — remove a key
